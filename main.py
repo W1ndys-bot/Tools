@@ -5,7 +5,7 @@ import asyncio
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.api import send_group_msg, send_private_msg
+from app.api import send_group_msg
 from app.scripts.Tools.api import fetch_delivery_info
 
 
