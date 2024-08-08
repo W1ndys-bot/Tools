@@ -18,3 +18,15 @@ async def fetch_delivery_info(nu):
                 return data
             else:
                 return {"error": data.get("msg") + "\n仅支持无需验证的快递查询"}
+
+
+# IP地址查询
+async def fetch_ip_info(ip):
+    url = f"https://api.oioweb.cn/api/ip/ipaddress?ip={ip}"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            data = await response.json()
+            if data.get("code") == 200:
+                return data
+            else:
+                return {"error": data.get("msg") + "\nIP地址查询失败"}
