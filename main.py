@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.api import send_group_msg
 from app.scripts.Tools.api import fetch_delivery_info, fetch_ip_info
+from app.switch import load_switch, save_switch
 
 
 async def process_delivery_info(websocket, msg, delivery_number):
