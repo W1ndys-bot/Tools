@@ -79,19 +79,21 @@ async def handle_group_message(websocket, msg):
                     msg.get("group_id"),
                     f"[CQ:reply,id={msg.get('message_id')}]正在ping {address}...",
                 )
+
                 result = await ping_test(address)
+
                 if result.get("error"):
                     await send_group_msg(
                         websocket,
                         msg.get("group_id"),
-                        f"[CQ:reply,id={delmsg_id}]ping {address} 失败: {result.get('error')}",
+                        f"[CQ:reply,id={msg.get('message_id')}]ping {address} 失败:\n{result.get('error')}",
                     )
                     await delete_msg(websocket, delmsg_id)
                 else:
                     await send_group_msg(
                         websocket,
                         msg.get("group_id"),
-                        f"[CQ:reply,id={delmsg_id}]ping {address} 结果: {result.get('result')}",
+                        f"[CQ:reply,id={msg.get('message_id')}]ping {address} 结果:\n{result.get('result')}",
                     )
                     await delete_msg(websocket, delmsg_id)
             else:
