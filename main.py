@@ -2,11 +2,13 @@ import logging
 import sys
 import os
 import asyncio
+import re
+
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.api import send_group_msg
-from app.scripts.Tools.api import fetch_delivery_info, fetch_ip_info
+from app.api import *
+from app.scripts.Tools.api import *
 
 
 async def process_delivery_info(websocket, msg, delivery_number):
@@ -48,7 +50,7 @@ async def process_ip_info(websocket, msg, ip):
         if disp:
             asyncio.create_task(
                 send_group_msg(websocket, msg.get("group_id"), f"IP地址信息: {disp}")
-            )  # 使用 create_task
+            )
         else:
             logging.error("获取IP信息失败，address字段为空")
     except Exception as e:
@@ -60,13 +62,41 @@ async def handle_group_message(websocket, msg):
         if msg.get("raw_message").startswith("查快递 "):
             logging.info(f"收到查快递消息: {msg.get('raw_message')}")
             delivery_number = msg.get("raw_message").split(" ")[1]  # 不再转换为整数
-            asyncio.create_task(
-                process_delivery_info(websocket, msg, delivery_number)
-            )  # 使用 create_task
+            await process_delivery_info(websocket, msg, delivery_number)  # 改为await
         elif msg.get("raw_message").startswith("查IP "):
             logging.info(f"收到查IP消息: {msg.get('raw_message')}")
             ip = msg.get("raw_message").split(" ")[1]
-            asyncio.create_task(process_ip_info(websocket, msg, ip))  # 使用 create_task
+            await process_ip_info(websocket, msg, ip)  # 改为await
+
+        elif msg.get("raw_message").startswith("ping "):
+            logging.info(f"收到ping消息: {msg.get('raw_message')}")
+            match = re.match(r"ping\s+(.*)", msg.get("raw_message"))
+            if match:
+                address = match.group(1)
+
+                delmsg_id = await send_group_msg_with_reply(
+                    websocket,
+                    msg.get("group_id"),
+                    f"[CQ:reply,id={msg.get('message_id')}]正在ping {address}...",
+                )
+                result = await ping_test(address)
+                if result.get("error"):
+                    await send_group_msg(
+                        websocket,
+                        msg.get("group_id"),
+                        f"[CQ:reply,id={delmsg_id}]ping {address} 失败: {result.get('error')}",
+                    )
+                    await delete_msg(websocket, delmsg_id)
+                else:
+                    await send_group_msg(
+                        websocket,
+                        msg.get("group_id"),
+                        f"[CQ:reply,id={delmsg_id}]ping {address} 结果: {result.get('result')}",
+                    )
+                    await delete_msg(websocket, delmsg_id)
+            else:
+                logging.error("未匹配到地址，请检查格式")
+
     except Exception as e:
         logging.error(f"处理API消息时发生错误: {e}")
 
