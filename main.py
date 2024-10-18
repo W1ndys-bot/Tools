@@ -3,12 +3,31 @@ import sys
 import os
 import asyncio
 import re
+import socket
 
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.api import *
 from app.scripts.Tools.api import *
+
+
+def is_valid_address(address):
+    # 检查是否为合法的IP地址
+    try:
+        socket.inet_aton(address)
+        return True
+    except socket.error:
+        pass
+
+    # 检查是否为合法的域名
+    domain_regex = re.compile(
+        r"^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z]{2,6})+$"
+    )
+    if domain_regex.match(address):
+        return True
+
+    return False
 
 
 async def process_delivery_info(websocket, msg, delivery_number):
@@ -70,9 +89,20 @@ async def handle_group_message(websocket, msg):
 
         elif msg.get("raw_message").startswith("ping "):
             logging.info(f"收到ping消息: {msg.get('raw_message')}")
-            match = re.match(r"ping\s+(.*)", msg.get("raw_message"))
+            match = re.match(
+                r"ping\s+([a-zA-Z0-9.-]+)", msg.get("raw_message")
+            )  # 只允许字母、数字、点和破折号
             if match:
                 address = match.group(1)
+
+                # 验证地址是否为合法的IP或域名
+                if not is_valid_address(address):
+                    await send_group_msg(
+                        websocket,
+                        msg.get("group_id"),
+                        f"[CQ:reply,id={msg.get('message_id')}]无效的地址: {address}",
+                    )
+                    return
 
                 delmsg_id = await send_group_msg_with_reply(
                     websocket,
